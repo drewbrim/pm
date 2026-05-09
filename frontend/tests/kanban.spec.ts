@@ -45,3 +45,31 @@ test("moves a card between columns", async ({ page }) => {
   await page.mouse.up();
   await expect(targetColumn.getByTestId("card-card-1")).toBeVisible();
 });
+
+test("moves a card into an empty column", async ({ page }) => {
+  await page.goto("/");
+
+  const discoveryColumn = page.getByTestId("column-col-discovery");
+  await discoveryColumn.getByLabel("Delete Prototype analytics view").click();
+  await expect(discoveryColumn.getByText(/drop a card here/i)).toBeVisible();
+
+  const card = page.getByTestId("card-card-1");
+  const cardBox = await card.boundingBox();
+  const columnBox = await discoveryColumn.boundingBox();
+  if (!cardBox || !columnBox) {
+    throw new Error("Unable to resolve drag coordinates.");
+  }
+
+  await page.mouse.move(
+    cardBox.x + cardBox.width / 2,
+    cardBox.y + cardBox.height / 2
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    columnBox.x + columnBox.width / 2,
+    columnBox.y + columnBox.height / 2,
+    { steps: 12 }
+  );
+  await page.mouse.up();
+  await expect(discoveryColumn.getByTestId("card-card-1")).toBeVisible();
+});

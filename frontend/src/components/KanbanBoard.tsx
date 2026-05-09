@@ -9,6 +9,9 @@ import {
   useSensor,
   useSensors,
   closestCorners,
+  pointerWithin,
+  rectIntersection,
+  type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
@@ -32,6 +35,15 @@ export const KanbanBoard = () => {
       activationConstraint: { distance: 6 },
     })
   );
+
+  // pointerWithin first so an empty column under the cursor wins over neighboring cards' corners.
+  const collisionDetection: CollisionDetection = (args) => {
+    const pointer = pointerWithin(args);
+    if (pointer.length > 0) return pointer;
+    const intersections = rectIntersection(args);
+    if (intersections.length > 0) return intersections;
+    return closestCorners(args);
+  };
 
   const cardsById = useMemo(() => board.cards, [board.cards]);
 
@@ -152,7 +164,7 @@ export const KanbanBoard = () => {
 
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCorners}
+          collisionDetection={collisionDetection}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
