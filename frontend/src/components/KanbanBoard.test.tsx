@@ -1,6 +1,16 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { afterEach, vi } from "vitest";
 import { KanbanBoard } from "@/components/KanbanBoard";
+import * as nav from "next/navigation";
+
+const routerMocks = (nav as unknown as { __routerMocks: { replace: ReturnType<typeof vi.fn> } }).__routerMocks;
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+  routerMocks.replace.mockClear();
+});
 
 const getFirstColumn = () => screen.getAllByTestId(/column-/i)[0];
 
@@ -8,6 +18,20 @@ describe("KanbanBoard", () => {
   it("renders five columns", () => {
     render(<KanbanBoard />);
     expect(screen.getAllByTestId(/column-/i)).toHaveLength(5);
+  });
+
+  it("logs out and redirects to /login", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<KanbanBoard />);
+    await userEvent.click(screen.getByRole("button", { name: /log out/i }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/logout",
+      expect.objectContaining({ method: "POST", credentials: "include" })
+    );
+    expect(routerMocks.replace).toHaveBeenCalledWith("/login");
   });
 
   it("renames a column", async () => {
