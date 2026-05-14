@@ -173,22 +173,22 @@ Tooling note: switched from `passlib[bcrypt]` to using the `bcrypt` package dire
 Goal: Replace `useState(initialData)` with real API calls; mutations persist.
 
 Substeps:
-- [ ] `frontend/src/lib/api.ts` with `getBoard()` and `saveBoard(board)` (fetch with `credentials: "include"`)
-- [ ] `KanbanBoard.tsx`:
-  - [ ] Fetch board on mount; minimal loading state
-  - [ ] `handleRenameColumn`, `handleAddCard`, `handleDeleteCard`, drag-end → optimistic local update, then `saveBoard`; on failure, refetch and show inline error
-- [ ] Remove `initialData` from the live render path (keep as a test fixture only)
+- [x] `frontend/src/lib/api.ts` with `getBoard()` and `saveBoard(board)` (fetch with `credentials: "include"`)
+- [x] `KanbanBoard.tsx`:
+  - [x] Fetch board on mount; minimal loading state
+  - [x] `handleRenameColumn`, `handleAddCard`, `handleDeleteCard`, drag-end → optimistic local update, then `saveBoard`; on failure, refetch and show inline error (saves are serialized through a promise queue so a fast burst of edits can't reorder PUTs)
+- [x] Column rename committed on blur/Enter (Escape reverts) instead of firing a PUT per keystroke
+- [x] Remove `initialData` from the live render path (keep as a test fixture only)
 
 Tests (near-full coverage):
-- Backend: existing suites still green
+- Backend: existing suites still green (23/23)
 - Frontend
-  - [ ] Vitest: each handler calls `saveBoard` with the expected payload
-  - [ ] Vitest: a rejected `saveBoard` triggers a refetch and surfaces an error
-  - [ ] Playwright (against the container): add card → reload → still there; rename column → reload → still renamed; drag card across columns → reload → ordering preserved
+  - [x] Vitest: mount fetch, logout, rename PUT on blur, add-card PUT, delete-card PUT, save-failure → error + refetch (6 KanbanBoard tests, 13 vitest total)
+  - [x] Playwright (against the container): seeds the board per test via `PUT /api/board`; add card → reload, rename column → reload, drag across columns → reload, drag into empty column (8 playwright total)
 
 Success criteria:
-- All mutations persist across page reload
-- All suites green
+- [x] All mutations persist across page reload (verified by playwright reload assertions)
+- [x] All suites green: vitest 13/13, pytest 23/23, playwright 8/8
 
 ---
 
