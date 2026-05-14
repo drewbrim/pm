@@ -142,24 +142,29 @@ Success criteria: `docs/DATABASE.md` is approved by the user.
 Goal: Persistence + CRUD for the Kanban.
 
 Substeps:
-- [ ] SQLite file at `/data/pm.db`; bootstrap creates tables + seeds user/board if missing on startup
-- [ ] `app/db.py` (connection helper) and `app/models.py` (table definitions); pick one of SQLAlchemy or stdlib `sqlite3` and stick with it
-- [ ] Pydantic models mirroring `BoardData` / `Column` / `Card`
-- [ ] Endpoints (auth required):
-  - [ ] `GET /api/board` → user's `BoardData`
-  - [ ] `PUT /api/board` → replaces user's `BoardData`; rejects malformed payloads with 422
+- [x] SQLite file at `/data/pm.db`; FastAPI lifespan handler runs `bootstrap.run()` which creates tables + seeds user/board (idempotent)
+- [x] `app/db.py` (connection context manager, lazy `DB_PATH` for tests, `PRAGMA foreign_keys = ON`); stdlib `sqlite3`
+- [x] `app/models.py` with Pydantic `Card`, `Column`, `BoardData` (`extra="forbid"`, `model_validator` for cardIds referential integrity, plus `EMPTY_BOARD` default)
+- [x] `app/users.py` (find/create + bcrypt) and `app/boards.py` (get/save/create_default with `INSERT … ON CONFLICT` upsert)
+- [x] Auth refactored: session stores `user_id`; `/api/login` looks up by username and bcrypt-verifies; `/api/me` looks up by id
+- [x] Endpoints (auth required):
+  - [x] `GET /api/board` → user's `BoardData`
+  - [x] `PUT /api/board` → replaces user's `BoardData`; rejects malformed payloads with 422
 
-Tests (near-full coverage):
-- [ ] Bootstrap: schema created, `user` seeded, default board attached
-- [ ] `GET /api/board`: 401 unauth, 200 returns seeded board when authed
-- [ ] `PUT /api/board`: round-trip write then read returns identical data
-- [ ] Validation: missing fields, wrong types, card id referenced in `cardIds` but missing from `cards` map → 422
-- [ ] FK isolation: a second test user's board is not visible to the first
+Tests (near-full coverage, 23 total):
+- [x] Bootstrap: schema created, `user` seeded with bcrypt hash, default empty board attached, idempotent across re-runs
+- [x] `GET /api/board`: 401 unauth, 200 returns seeded board when authed
+- [x] `PUT /api/board`: round-trip write then read returns identical data
+- [x] Validation: missing fields, extra fields, unknown card id in `cardIds`, orphan card in `cards` map, duplicate card across columns, mismatched `cards` map key vs `card.id` → 422
+- [x] FK isolation: second user's writes don't leak into the logged-in user's GET
+- [x] Existing auth tests updated for new login response shape
 
 Success criteria:
-- Backend test suite green
-- Manual `curl` round-trip works against a running container
-- DB file persists across `docker compose down && up`
+- [x] Backend test suite green: 23/23
+- [x] Manual `curl` round-trip works against a running container (PUT then GET returns identical payload)
+- [x] DB file persists across `docker compose down && up` (verified by writing a card, restarting, reading it back)
+
+Tooling note: switched from `passlib[bcrypt]` to using the `bcrypt` package directly - passlib 1.7 has a known incompat with bcrypt 4.x.
 
 ---
 

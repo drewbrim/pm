@@ -6,7 +6,9 @@ def test_login_success_sets_cookie(client):
         "/api/login", json={"username": "user", "password": "password"}
     )
     assert response.status_code == 200
-    assert response.json() == {"username": "user"}
+    body = response.json()
+    assert body["username"] == "user"
+    assert isinstance(body["id"], int)
     assert SESSION_COOKIE in response.cookies
 
 
