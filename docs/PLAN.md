@@ -122,14 +122,13 @@ In scope:
 - Real `user` row seeded with hardcoded creds; boards FK to `user_id`
 
 Substeps:
-- [ ] Author `docs/DATABASE.md` covering:
-  - Tables:
-    - `users(id INTEGER PK, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, created_at TEXT NOT NULL)`
-    - `boards(id INTEGER PK, user_id INTEGER FK→users.id NOT NULL, data TEXT NOT NULL, updated_at TEXT NOT NULL)`
+- [x] Author `docs/DATABASE.md` covering:
+  - Tables (`users`, `boards`); FK with `ON DELETE CASCADE`; `UNIQUE` on `boards.user_id` to enforce one-board-per-user for MVP
   - Why JSON blob: matches the in-memory `BoardData` shape from `frontend/src/lib/kanban.ts`; MVP keeps things simple
   - Migrations: single bootstrap script on startup; no Alembic for MVP
-  - Seeding: on first boot, create the `user`/`password` user (hashed) and an empty default board
-  - Sample `BoardData` JSON
+  - Seeding: on first boot, create the `user`/`password` user (bcrypt-hashed) and an empty default board
+  - Sample `BoardData` JSON + validation invariants (`cardIds` referential integrity)
+  - Open questions for sign-off (default board contents, `passlib[bcrypt]`, `UNIQUE` constraint, stdlib `sqlite3` vs SQLAlchemy, no Alembic)
 - [ ] Stop for user approval before Part 6
 
 Tests: docs only.
