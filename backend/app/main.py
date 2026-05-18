@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
-from app import auth, boards, bootstrap, users
+from app import ai, auth, boards, bootstrap, users
 from app.models import BoardData
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
@@ -74,6 +74,19 @@ def api_put_board(
 ) -> dict:
     boards.save_board(user_id, body)
     return body.model_dump()
+
+
+@app.post("/api/ai/ping")
+async def api_ai_ping(
+    user_id: int = Depends(auth.current_user_id),
+) -> dict[str, str]:
+    try:
+        answer = await ai.ask([{"role": "user", "content": "what is 2+2?"}])
+    except ai.AIError:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail="AI service unavailable"
+        )
+    return {"answer": answer}
 
 
 class SPAStaticFiles(StaticFiles):

@@ -197,19 +197,20 @@ Success criteria:
 Goal: Prove the OpenRouter call path with a trivial prompt.
 
 Substeps:
-- [ ] Read `OPENROUTER_API_KEY` from `.env` (already provided)
-- [ ] `app/ai.py` with `ask(messages) -> str` using OpenRouter's OpenAI-compatible endpoint and model `openai/gpt-oss-120b`
-- [ ] `POST /api/ai/ping` (auth required) sends "what is 2+2?" and returns the raw model answer
-- [ ] Surface OpenRouter errors as 502 with a useful (non-leaky) message
+- [x] Read `OPENROUTER_API_KEY` from `.env` (already provided)
+- [x] `app/ai.py` with async `ask(messages) -> str` via the official `openai` SDK (`AsyncOpenAI`) pointed at `https://openrouter.ai/api/v1`, model `openai/gpt-oss-120b`; sync codebase, async only on the network path
+- [x] `POST /api/ai/ping` (auth required) sends "what is 2+2?" and returns the raw model answer
+- [x] Surface OpenRouter errors as 502 with a useful (non-leaky) message (`AIError` wraps `OpenAIError` / missing key; endpoint returns `{"detail": "AI service unavailable"}`)
 
-Tests:
-- [ ] Unit: `ai.py` builds the right request payload (HTTP mocked)
-- [ ] Unit: missing API key → clean error, no stack leak
-- [ ] Integration (env-gated so CI can skip): `/api/ai/ping` returns a string containing "4"
+Tests (6 in `tests/test_ai.py`):
+- [x] Unit: `ai.py` builds the right request payload (SDK mocked: base_url, api_key, model, messages asserted)
+- [x] Unit: missing API key → clean `AIError`, no stack leak; endpoint variant returns 502
+- [x] `/api/ai/ping` requires auth (401 unauth); happy path via mocked `ask`
+- [x] Integration (env-gated, skips when no key so CI can skip): `/api/ai/ping` returns a string containing "4"
 
 Success criteria:
-- Local: `curl /api/ai/ping` returns a sensible "4" answer
-- Tests green
+- [x] Local: `/api/ai/ping` returns a sensible "4" answer (live test passed in-container against real OpenRouter)
+- [x] Tests green: pytest 29/29
 
 ---
 
