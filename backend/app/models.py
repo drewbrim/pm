@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
@@ -43,6 +45,20 @@ class BoardData(BaseModel):
             if card_id not in seen:
                 raise ValueError(f"card {card_id!r} is not in any column")
         return self
+
+
+class Message(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    role: Literal["user", "assistant"]
+    content: str
+
+
+class AIResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reply: str
+    board_update: BoardData | None
 
 
 EMPTY_BOARD: BoardData = BoardData(

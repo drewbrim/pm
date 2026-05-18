@@ -1,15 +1,16 @@
+import json
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
 from app import ai, auth, boards, bootstrap, users
-from app.models import BoardData
+from app.models import AIResponse, BoardData, Message
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 SESSION_SECRET = os.environ.get("SESSION_SECRET", "dev-secret-change-me")
@@ -87,6 +88,67 @@ async def api_ai_ping(
             status_code=status.HTTP_502_BAD_GATEWAY, detail="AI service unavailable"
         )
     return {"answer": answer}
+
+
+class ChatBody(BaseModel):
+    message: str
+    history: list[Message] = []
+
+
+AI_RESPONSE_FORMAT = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "ai_response",
+        "schema": AIResponse.model_json_schema(),
+    },
+}
+
+
+def _system_prompt(board: dict | None) -> str:
+    return (
+        "You are an assistant embedded in a Kanban project management app. "
+        "You can answer questions about the board and optionally change it.\n\n"
+        f"The current board as JSON:\n{json.dumps(board)}\n\n"
+        "You may: rename columns (change a column's title); and create, "
+        "edit, move, or delete cards.\n"
+        "You must NOT: change any column id, or add/remove columns.\n\n"
+        "Respond with JSON matching the required schema. Set board_update "
+        "to the COMPLETE updated board (same shape as above) when you change "
+        "anything, or null when you change nothing. Every card must be "
+        "referenced by exactly one column."
+    )
+
+
+@app.post("/api/ai/chat")
+async def api_ai_chat(
+    body: ChatBody, user_id: int = Depends(auth.current_user_id)
+) -> dict:
+    board = boards.get_board(user_id)
+    messages = [{"role": "system", "content": _system_prompt(board)}]
+    messages += [m.model_dump() for m in body.history]
+    messages.append({"role": "user", "content": body.message})
+
+    try:
+        raw = await ai.ask(
+            messages, response_format=AI_RESPONSE_FORMAT, temperature=0
+        )
+    except ai.AIError:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail="AI service unavailable"
+        )
+
+    try:
+        parsed = json.loads(raw) if raw else None
+        result = AIResponse.model_validate(parsed)
+    except (json.JSONDecodeError, TypeError, ValidationError):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="AI returned an invalid response",
+        )
+
+    if result.board_update is not None:
+        boards.save_board(user_id, result.board_update)
+    return result.model_dump()
 
 
 class SPAStaticFiles(StaticFiles):
