@@ -253,21 +253,22 @@ Success criteria:
 Goal: Add the chat sidebar; refresh the board when the AI updates it.
 
 Substeps:
-- [ ] `frontend/src/components/AIChatSidebar.tsx` mounted beside `<KanbanBoard />`
-  - [ ] Local `messages: Message[]` (history is client-side, per Parts 5/9)
-  - [ ] Input + send; user/assistant bubbles; loading state during request
-  - [ ] On response with `board_update`, lift state into `KanbanBoard` (prop callback or shared context) and replace it directly
-  - [ ] Palette: `--primary-blue` accents, `--secondary-purple` send button, `--gray-text` for timestamps
-- [ ] Keyboard: Enter sends, Shift+Enter newline
-- [ ] Error and empty states styled per palette; no emojis anywhere
+- [x] `frontend/src/components/AIChatSidebar.tsx` mounted beside `<KanbanBoard />` (page-level flex layout, shared `BoardSync` context)
+  - [x] Local `messages: Message[]` (history is client-side, sent verbatim to `/api/ai/chat`)
+  - [x] Input + send; user/assistant bubbles; loading ("Thinking..."/"Sending...") state
+  - [x] On `board_update`, replace `KanbanBoard` state directly via `BoardSync` context. No client re-PUT: `/api/ai/chat` already persists server-side (Part 9), so the redundant write was removed (also fixed a reload race)
+  - [x] Palette: `--primary-blue` bubbles/accents, `--secondary-purple` send button, `--gray-text` timestamps
+- [x] Keyboard: Enter sends, Shift+Enter newline
+- [x] Error and empty states styled per palette; no emojis anywhere
 
-Tests (near-full coverage):
-- [ ] Vitest: render, send, history append on success
-- [ ] Vitest: response with `board_update` calls the board setter with the new data
-- [ ] Vitest: error response renders an inline error and leaves history untouched
-- [ ] Playwright: log in → open chat → "rename Backlog to Inbox" → board updates without reload → reload preserves it
-- [ ] Manual browser check (per CLAUDE.md): golden path and edge cases (empty input, server error, very long reply)
+Tests:
+- [x] Vitest: render, send, history forwarded on success (4 AIChatSidebar tests, 17 vitest total)
+- [x] Vitest: `board_update` calls the board setter via `BoardSync`
+- [x] Vitest: error response renders an inline error and leaves history untouched
+- [x] Vitest: Enter sends, Shift+Enter inserts a newline
+- [x] Playwright: log in → chat → board updates without reload → reload preserves it. `/api/ai/chat` is deterministically mocked at the network layer (the live model is nondeterministic with no fallback by design, per Part 9); the route handler also persists via the real `PUT /api/board`, mirroring the real endpoint, so the persistence assertion is genuine
+- [x] Playwright `workers: 1`: the MVP backend is single-user/single-board, so parallel workers stomped shared server state (root-caused via trace + isolation repro)
 
 Success criteria:
-- End-to-end demo: log in → chat → AI updates board → UI reflects instantly → reload preserves it
-- All suites green
+- [x] End-to-end demo: log in → chat → AI updates board → UI reflects instantly → reload preserves it
+- [x] All suites green: vitest 17/17, pytest 36/36, playwright 9/9

@@ -20,3 +20,23 @@ export async function saveBoard(board: BoardData): Promise<BoardData> {
   }
   return (await response.json()) as BoardData;
 }
+
+export type ChatMessage = { role: "user" | "assistant"; content: string };
+
+export type ChatResponse = { reply: string; board_update: BoardData | null };
+
+export async function chat(
+  message: string,
+  history: ChatMessage[]
+): Promise<ChatResponse> {
+  const response = await fetch("/api/ai/chat", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message, history }),
+  });
+  if (!response.ok) {
+    throw new Error(`POST /api/ai/chat returned ${response.status}`);
+  }
+  return (await response.json()) as ChatResponse;
+}

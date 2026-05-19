@@ -20,6 +20,7 @@ import { KanbanCardPreview } from "@/components/KanbanCardPreview";
 import { createId, moveCard, type BoardData } from "@/lib/kanban";
 import { getBoard, saveBoard } from "@/lib/api";
 import { logout } from "@/lib/auth";
+import { useBoardSync } from "@/components/BoardSync";
 
 export const KanbanBoard = () => {
   const router = useRouter();
@@ -57,6 +58,13 @@ export const KanbanBoard = () => {
           // give up; the error message stays put
         }
       });
+  };
+
+  // The AI sidebar's /api/ai/chat call already persisted the board server-side,
+  // so just replace the in-memory state (no redundant PUT).
+  const sync = useBoardSync();
+  sync.apply = (next: BoardData) => {
+    setBoard(next);
   };
 
   const handleLogout = async () => {

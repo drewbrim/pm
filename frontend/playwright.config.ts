@@ -2,6 +2,9 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests",
+  // The MVP backend is single-user / single-board, so specs share one server
+  // state. Serialize to keep parallel workers from stomping each other.
+  workers: 1,
   timeout: 60_000,
   expect: {
     timeout: 10_000,
