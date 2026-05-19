@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type KeyboardEvent } from "react";
+import ReactMarkdown from "react-markdown";
 import { chat, type ChatMessage } from "@/lib/api";
 import { useBoardSync } from "@/components/BoardSync";
 
@@ -85,7 +86,13 @@ export const AIChatSidebar = () => {
                     : "border border-[var(--stroke)] bg-[var(--surface)] text-[var(--navy-dark)]"
                 }`}
               >
-                <p className="whitespace-pre-wrap">{message.content}</p>
+                {message.role === "assistant" ? (
+                  <div className="chat-md">
+                    <ReactMarkdown>{message.content}</ReactMarkdown>
+                  </div>
+                ) : (
+                  <p className="whitespace-pre-wrap">{message.content}</p>
+                )}
                 <p
                   className={`mt-2 text-[11px] ${
                     message.role === "user"
